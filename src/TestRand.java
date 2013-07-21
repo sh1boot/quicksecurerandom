@@ -26,6 +26,43 @@ public class TestRand {
         }
     }
 
+    public class MySecureRandom32 extends java.security.SecureRandom {
+        private int m = 1;
+        private int r = 0;
+        private long l = 0;
+        private int ll = 0;
+        public long bits = 0;
+
+        @Override
+        public final int nextInt(int n) {
+            while (true) {
+                if (m < 0x40000000) {
+                    int b = Integer.numberOfLeadingZeros(m) - 1;
+                    if (ll < b)
+                    {
+                        l += ((long)next(32) - Integer.MIN_VALUE) << ll;
+                        ll += 32;
+                    }
+                    m <<= b;
+                    r <<= b;
+                    bits += b;
+                    r += (int)l & ~(-1 << b);
+                    l >>= b;
+                    ll -= b;
+                }
+                int q = m / n;
+                if (r < n * q) {
+                    int x = (int)(r % n);
+                    m = q;
+                    r /= n;
+                    return x;
+                }
+                m -= n * q;
+                r -= n * q;
+            }
+        }
+    }
+
     public class MyRandom extends java.util.Random {
         private long m = 1;
         private long r = 0;
@@ -127,6 +164,7 @@ public class TestRand {
         MyRandom mr = t.new MyRandom();
         java.util.Random jr = new java.util.Random();
         MySecureRandom msr = t.new MySecureRandom();
+        MySecureRandom32 msr32 = t.new MySecureRandom32();
         java.security.SecureRandom jsr = new java.security.SecureRandom();
 
         t.test(mr);
@@ -136,6 +174,8 @@ public class TestRand {
         System.out.append('\n');
         t.test(msr);
         System.out.printf("bits used: %d\n\n", msr.bits);
+        t.test(msr32);
+        System.out.printf("bits used: %d\n\n", msr32.bits);
         t.test(jsr);
         t.test_next(jsr, msr.bits);
         System.out.append('\n');
